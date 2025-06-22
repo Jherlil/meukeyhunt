@@ -1,0 +1,8 @@
+*.zip filter=lfs diff=lfs merge=lfs -text
+*.bin filter=lfs diff=lfs merge=lfs -text
+*.pt filter=lfs diff=lfs merge=lfs -text
+libtorch/** filter=lfs diff=lfs merge=lfs -text
+xgboost/** filter=lfs diff=lfs merge=lfs -text
+lightgbm/** filter=lfs diff=lfs merge=lfs -text
+*.dat filter=lfs diff=lfs merge=lfs -text
+*.jpg filter=lfs diff=lfs merge=lfs -text

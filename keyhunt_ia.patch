@@ -1,0 +1,116 @@
+
+diff --git a/keyhunt.cpp b/keyhunt.cpp
+index abcdef1..1234567 100644
+--- a/keyhunt.cpp
++++ b/keyhunt.cpp
+@@ -486,6 +486,7 @@
+   FILE *fd = NULL;
+@@ -999,7 +1000,40 @@
+       break;
+
++/* -----------------------------------------------------------------
++ * BLOCO BSGS – leitura das chaves públicas e preenchimento de vetores
++ * ----------------------------------------------------------------- */
++      if (FLAGMODE == MODE_BSGS) {
++        printf("[+] Opening file %s
+", fileName);
++
++        fd = fopen(fileName, "rb");
++        if (!fd) {
++          fprintf(stderr, "[E] Can't open file %s
+", fileName);
++          exit(EXIT_FAILURE);
++        }
++
++        aux = (char *)malloc(1024);
++        checkpointer(aux, __FILE__, "malloc", "aux", __LINE__ - 1);
++
++        N = 0;
++        while (fgets(aux, 1024, fd)) {
++          trim(aux, " \t
+\r");
++          if (strlen(aux) >= 66) ++N;
++        }
++        if (N == 0) {
++          fprintf(stderr, "[E] There is no valid data in the file
+");
++          free(aux); fclose(fd); exit(EXIT_FAILURE);
++        }
++
++        rewind(fd);
++
++        bsgs_found = (int *)calloc(N, sizeof(int));
++        checkpointer(bsgs_found, __FILE__, "calloc", "bsgs_found", __LINE__ - 1);
++
++        OriginalPointsBSGS.reserve(N);
++        OriginalPointsBSGScompressed = (bool *)malloc(N * sizeof(bool));
++        checkpointer(OriginalPointsBSGScompressed, __FILE__, "malloc",
++                     "OriginalPointsBSGScompressed", __LINE__ - 1);
++
++        pointx_str = (char *)malloc(65);
++        checkpointer(pointx_str, __FILE__, "malloc", "pointx_str", __LINE__ - 1);
++        pointy_str = (char *)malloc(65);
++        checkpointer(pointy_str, __FILE__, "malloc", "pointy_str", __LINE__ - 1);
++
++        size_t idx = 0;
++        while (fgets(aux, 1024, fd)) {
++          trim(aux, " \t
+\r");
++          if (strlen(aux) < 66) continue;
++
++          stringtokenizer(aux, &tokenizerbsgs);
++          aux2 = nextToken(&tokenizerbsgs);
++
++          if (strlen(aux2) == 66 || strlen(aux2) == 130) {
++            if (secp->ParsePublicKeyHex(aux2,
++                                        OriginalPointsBSGS[idx],
++                                        OriginalPointsBSGScompressed[idx])) {
++              ++idx;
++            }
++          }
++          freetokenizer(&tokenizerbsgs);
++        }
++
++        free(aux); fclose(fd);
++
++        bsgs_point_number = idx;
++        printf("[+] Added %" PRIu64 " points from file
+",
++               (uint64_t)bsgs_point_number);
++
++        BSGS_N.SetInt32(0);
++        BSGS_M.SetInt32(0);
++        BSGS_M.SetInt64(bsgs_m);
++      }
+@@ -1345,6 +1389,14 @@
+   printf("
+End
+");
++#ifdef _WIN64
++  CloseHandle(write_keys);
++  CloseHandle(write_random);
++  CloseHandle(bsgs_thread);
++#else
++  pthread_mutex_destroy(&write_keys);
++  pthread_mutex_destroy(&write_random);
++  pthread_mutex_destroy(&bsgs_thread);
++#endif
+   return 0;
+ }
++
++void pubkeytopubaddress_dst(char *pkey, int length, char *dst)
++{
++  char   digest[60];
++  size_t pubaddress_size = 40;
++
++  sha256((uint8_t *)pkey, length, (uint8_t *)digest);
++  RMD160Data((const unsigned char *)digest, 32, digest + 1);
++  digest[0] = 0x00;
++
++  sha256((uint8_t *)digest,     21, (uint8_t *)digest + 21);
++  sha256((uint8_t *)digest + 21, 32, (uint8_t *)digest + 21);
++
++  if (!b58enc(dst, &pubaddress_size, digest, 25))
++      fprintf(stderr, "[E] error b58enc
+");
++}

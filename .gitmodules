@@ -1,0 +1,9 @@
+[submodule "LightGBM"]
+	path = LightGBM
+	url = https://github.com/microsoft/LightGBM.git
+[submodule "Machine"]
+	path = Machine
+	url = https://github.com/Jherlil/Machine.git
+[submodule "xgboost"]
+	path = xgboost
+	url = https://github.com/dmlc/xgboost.git
