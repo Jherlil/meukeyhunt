@@ -20,6 +20,7 @@ public:
     static void save(const std::string& path);
     static void load(const std::string& path);
     static void set_verbose(bool v);
+    static void set_params(float a, float g, float e);
     static std::string best_key();
     static float best_key_score();
     static std::vector<FeatureSet> top_candidates(size_t n);

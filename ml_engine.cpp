@@ -622,9 +622,25 @@ bool MLEngine::ml_load_training_data(const std::string& path, bool positive_para
 }
 
 void MLEngine::ml_update_model(const unsigned char* address, bool is_hit) {
-    std::cout << "[DEBUG ML_ENGINE_UPDATE] Entrando..." << std::endl; std::cout.flush();
-    // Seu código aqui
-    std::cout << "[DEBUG ML_ENGINE_UPDATE] Saindo." << std::endl; std::cout.flush();
+    std::lock_guard<std::mutex> lock(ml_mutex);
+    if (!is_initialized || train_data.empty()) return;
+    try {
+        std::vector<float> flat;
+        for (const auto& row : train_data) flat.insert(flat.end(), row.begin(), row.end());
+        torch::Tensor data = torch::from_blob(flat.data(), {(long)train_data.size(), INPUT_DIM_FEATURES}, torch::kFloat32).clone();
+        torch::Tensor labels = torch::from_blob(train_labels.data(), {(long)train_labels.size(),1}, torch::kFloat32).clone();
+        static torch::optim::SGD opt(model.parameters(), torch::optim::SGDOptions(0.001));
+        model.train();
+        opt.zero_grad();
+        auto out = model.forward({data}).toTensor();
+        auto loss = torch::binary_cross_entropy(out, labels);
+        loss.backward();
+        opt.step();
+        model.eval();
+        std::cout << "[ML] Modelo atualizado com " << train_data.size() << " exemplos." << std::endl;
+    } catch (const std::exception& e) {
+        std::cerr << "[ML] Erro em ml_update_model: " << e.what() << std::endl;
+    }
 }
 
 void MLEngine::ml_report_heatmap() {

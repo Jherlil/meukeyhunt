@@ -47,7 +47,8 @@ void RLAgent::observe(const FeatureSet& feat, float score, bool hit) {
     int zone = zone_from_feature(feat);
     auto &q = q_table[zone];
     float reward = hit ? 1.0f : -0.05f;
-    q[1] = q[1] + alpha * (reward - q[1]);
+    float max_future = std::max(q[0], q[1]);
+    q[1] += alpha * (reward + gamma * max_future - q[1]);
 }
 
 bool RLAgent::decide(const FeatureSet& feat) {
@@ -136,4 +137,10 @@ std::vector<FeatureSet> RLAgent::top_candidates(size_t n) {
 
 void RLAgent::set_verbose(bool v) {
     verbose = v;
+}
+
+void RLAgent::set_params(float a, float g, float e) {
+    alpha = a;
+    gamma = g;
+    epsilon = e;
 }

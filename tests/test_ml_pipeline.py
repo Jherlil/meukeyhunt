@@ -29,12 +29,18 @@ try:
         simulated_annealing,
         rl_agent_decide_range,
         rl_agent_update,
+        pca_reduce,
+        kmeans_cluster,
+        ensemble_score,
     )
 except Exception:
     extract_features = None
     linear_regression = None
     diff_ratio_stats = None
     fft_transform = None
+    pca_reduce = None
+    kmeans_cluster = None
+    ensemble_score = None
 
 
 def test_csv_loading():
@@ -106,3 +112,14 @@ def test_extra_algorithms():
     start, end = rl_agent_decide_range(0.5, 2)
     assert end > start
     rl_agent_update(True)
+
+def test_clustering_utils():
+    if np is None or pca_reduce is None or kmeans_cluster is None or ensemble_score is None:
+        pytest.skip('clustering extras not available')
+    data = np.random.rand(5, 3)
+    red = pca_reduce(data, n_components=2)
+    assert red.shape[1] == 2
+    labels = kmeans_cluster(data, n_clusters=2)
+    assert labels.shape[0] == data.shape[0]
+    ens = ensemble_score(0.1, 0.2, 0.3, 0.4)
+    assert abs(ens - 0.25) < 1e-6
