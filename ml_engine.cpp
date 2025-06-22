@@ -563,7 +563,8 @@ float MLEngine::ml_xgboost_score(const FeatureSet& f) {
 }
 
 bool MLEngine::ml_load_training_data(const std::string& path, bool positive_param) {
-    std::cout << "[DEBUG ML_ENGINE_LOAD_TRAIN] Entrando para " << path << ", positive: " << positive_param << std::endl; std::cout.flush();
+    // Carregamento de dados pode gerar milhares de linhas; limite a verbosidade
+    const int progress_interval = 50000; // Atualiza a cada 50k linhas
     // std::lock_guard<std::mutex> lock(ml_mutex); // REMOVIDO - ml_mutex já está bloqueado por ml_init
     
     std::ifstream data_file(path);
@@ -572,24 +573,24 @@ bool MLEngine::ml_load_training_data(const std::string& path, bool positive_para
         return false; 
     }
     std::string line, header_line;
-    if (!std::getline(data_file, header_line)) { 
+    if (!std::getline(data_file, header_line)) {
         std::cerr << "[ML] Erro ao ler header ou arquivo CSV vazio: " << path << std::endl; std::cerr.flush(); 
         return false; 
     }
-    std::cout << "[DEBUG ML_ENGINE_LOAD_TRAIN] Header lido de " << path << ": " << header_line << std::endl; std::cout.flush();
+    // Header do CSV lido com sucesso
 
-    int line_count_local = 1; 
-    int loaded_count_local = 0; 
+    int line_count_local = 1;
+    int loaded_count_local = 0;
     while (std::getline(data_file, line)) {
         line_count_local++;
-        std::cout << "[DEBUG ML_ENGINE_LOAD_TRAIN] Linha " << line_count_local << " Bruta: [" << line << "]" << std::endl; std::cout.flush();
+        if (line_count_local % progress_interval == 0) {
+            std::cout << "\r[ML] " << line_count_local << " linhas lidas..." << std::flush;
+        }
 
         while (!line.empty() && (line.back() == '\r' || line.back() == '\n')) line.pop_back();
         if (line.empty()) {
-            std::cout << "[DEBUG ML_ENGINE_LOAD_TRAIN] Linha " << line_count_local << " vazia após trim. Pulando." << std::endl; std::cout.flush();
             continue;
         }
-        std::cout << "[DEBUG ML_ENGINE_LOAD_TRAIN] Linha " << line_count_local << " Trimmed: [" << line << "]" << std::endl; std::cout.flush();
         
         std::stringstream ss(line);
         std::string s_priv_hex_csv, s_privkey_int_csv, s_wif_csv, s_compressed_pub_csv, s_uncompressed_pub_csv, s_address_csv, s_rmd160_csv, s_score_str_csv;
@@ -599,21 +600,17 @@ bool MLEngine::ml_load_training_data(const std::string& path, bool positive_para
             std::getline(ss, s_uncompressed_pub_csv, ',') && std::getline(ss, s_address_csv, ',') &&
             std::getline(ss, s_rmd160_csv, ',') && std::getline(ss, s_score_str_csv)) {
             
-            std::cout << "[DEBUG ML_ENGINE_LOAD_TRAIN] Linha " << line_count_local << " parseada. PrivHex: " << s_priv_hex_csv.substr(0,std::min((size_t)10, s_priv_hex_csv.length())) << "..., ScoreStr: " << s_score_str_csv << std::endl; std::cout.flush();
             try {
-                float label_val_local = std::stof(s_score_str_csv); 
-                std::cout << "[DEBUG ML_ENGINE_LOAD_TRAIN] Linha " << line_count_local << ": Chamando extract_features para PrivHex: " << s_priv_hex_csv.substr(0,std::min((size_t)10, s_priv_hex_csv.length())) << "..." << std::endl; std::cout.flush();
-                FeatureSet f_csv_local = ::extract_features(s_priv_hex_csv); 
-                std::cout << "[DEBUG ML_ENGINE_LOAD_TRAIN] Linha " << line_count_local << ": extract_features retornou." << std::endl; std::cout.flush();
-                
-                std::vector<float> feats_csv_local = f_csv_local.to_vector(); 
-                std::cout << "[DEBUG ML_ENGINE_LOAD_TRAIN] Linha " << line_count_local << ": to_vector() concluído. Tamanho do vetor: " << feats_csv_local.size() << std::endl; std::cout.flush();
+                float label_val_local = std::stof(s_score_str_csv);
+                FeatureSet f_csv_local = ::extract_features(s_priv_hex_csv);
+
+                std::vector<float> feats_csv_local = f_csv_local.to_vector();
 
                 if (feats_csv_local.size() == INPUT_DIM_FEATURES) {
                     train_data.push_back(feats_csv_local);
                     train_labels.push_back(label_val_local);
                     loaded_count_local++;
-                    std::cout << "[DEBUG ML_ENGINE_LOAD_TRAIN] Linha " << line_count_local << ": Dados adicionados. Total carregado agora: " << loaded_count_local << std::endl; std::cout.flush();
+                    // dados válidos adicionados
                 } else {
                      std::cerr << "[ML WARNING LOAD_TRAIN] Linha " << line_count_local << ": Tamanho de features incorreto (" << feats_csv_local.size() << "), esperado " << INPUT_DIM_FEATURES << ". PrivHex: " << s_priv_hex_csv.substr(0,10) << "..." << std::endl; std::cerr.flush();
                 }
@@ -624,8 +621,9 @@ bool MLEngine::ml_load_training_data(const std::string& path, bool positive_para
             std::cerr << "[ML WARNING LOAD_TRAIN_LOOP] Linha " << line_count_local << " não pode ser completamente parseada (colunas insuficientes?): [" << line << "]" << std::endl; std::cerr.flush();
         }
     }
-    std::cout << "[ML] Carregadas " << loaded_count_local << " amostras de " << path << " (total de linhas lidas do arquivo, incluindo header: " << line_count_local << ")" << std::endl; std::cout.flush();
-    std::cout << "[DEBUG ML_ENGINE_LOAD_TRAIN] Saindo de " << path << std::endl; std::cout.flush();
+    std::cout << std::endl;
+    std::cout << "[ML] Carregadas " << loaded_count_local << " amostras de " << path
+              << " (linhas processadas: " << line_count_local << ")" << std::endl;
     return loaded_count_local > 0;
 }
 

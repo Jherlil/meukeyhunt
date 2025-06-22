@@ -2419,17 +2419,28 @@ void *thread_process_minikeys(void *vargp)	{
 	free(tt);
 	rawbuffer = (char*) &counter.bits64;
 	count_valid = 0;
-	for(k = 0; k < 4; k++)	{
+        std::vector<std::string> suggestions = ia::query_promising_keys(4);
+        for (size_t s = 0; s < suggestions.size(); ++s) {
+            ia::Range dummy;
+            std::string priv_hex = suggestions[s];
+            if (!ia::keep_key(priv_hex, dummy)) continue;
+            bool hit = check_key(priv_hex.c_str());
+            FeatureSet f = extract_features(priv_hex);
+            RLAgent::observe(f, MLEngine::ml_predict(f), hit);
+            ia::reward(dummy, hit, f);
+        }
+        for(k = 0; k < 4; k++)  {
             ia::Range cur = ia::next_range();
             std::string priv_hex = to_hex(k);
             if (!ia::keep_key(priv_hex, cur)) continue;
             bool hit = check_key(priv_hex.c_str());
             FeatureSet f = extract_features(priv_hex);
-            RLAgent::observe(f, MLEngine::ml_predict(f), hit); // Alterado aqui
+            RLAgent::observe(f, MLEngine::ml_predict(f), hit);
             ia::reward(cur, hit, f);
-		minikey[k][0] = 'S';
-		minikey[k][22] = '?';
-		minikey[k][23] = 0x00;
+            minikey[k][0] = 'S';
+            minikey[k][22] = '?';
+            minikey[k][23] = 0x00;
+        }
 	}
 	minikey2check[0] = 'S';
 	minikey2check[22] = '?';

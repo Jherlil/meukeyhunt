@@ -91,7 +91,7 @@ KEYHUNT_OBJS = $(patsubst %.cpp,%.o,$(filter %.cpp,$(KEYHUNT_OBJS_SOURCES))) \
 # ----------------------------------------------------------
 #  Alvos principais
 # ----------------------------------------------------------
-.PHONY: all run clean train autotrain prepare debug_build release_build check_py
+.PHONY: all run clean train autotrain prepare debug_build release_build check_py check
 
 # 'all' agora depende de 'release_build' por padrão
 all: release_build
@@ -110,7 +110,10 @@ run: all
 	./keyhunt
 
 check_py:
-	python3 -m py_compile generate_keys.py autotrain.py train.py
+	        python3 -m py_compile generate_keys.py autotrain.py train.py
+
+check: check_py
+	pytest -q tests/test_ml_pipeline.py test_model_load.py
 
 train: check_py
 	python3 train_upgraded.py

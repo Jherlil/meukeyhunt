@@ -6,6 +6,7 @@
 #include <thread>
 #include <chrono>
 #include <iostream>
+#include <fstream>
 
 namespace ia {
 
@@ -74,6 +75,23 @@ void init(const std::string &model_path, const std::string &pos_data, const std:
     MLEngine::ml_init(model_path, pos_data);
     MLEngine::ml_load_training_data(pos_data, true);
     MLEngine::ml_load_training_data(neg_data, false);
+}
+
+std::vector<std::string> query_promising_keys(size_t n) {
+    std::vector<std::string> result;
+    if (n == 0) return result;
+
+    // 1) melhor chave observada pelo RLAgent
+    std::string best = RLAgent::best_key();
+    if (!best.empty()) result.push_back(best);
+
+    // 2) complementa com chaves de generated_keys.txt, se existir
+    std::ifstream fin("generated_keys.txt");
+    std::string line;
+    while (result.size() < n && std::getline(fin, line)) {
+        if (!line.empty()) result.push_back(line);
+    }
+    return result;
 }
 
 } // namespace ia

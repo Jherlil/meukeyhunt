@@ -38,6 +38,11 @@ VANITYKEYFOUND.txt
 *.so
 *.so.*
 *.dylib
+__pycache__/
+tests/__pycache__/
+build.log
+*.patch
+*.diff
 
 # Executables
 *.exe
