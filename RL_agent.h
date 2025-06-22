@@ -20,6 +20,7 @@ public:
     static void load(const std::string& path);
     static std::string best_key();
     static float best_key_score();
+    static std::vector<FeatureSet> top_candidates(size_t n);
 
 private:
     static std::vector<std::pair<FeatureSet, bool>> memory;

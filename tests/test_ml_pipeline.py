@@ -29,9 +29,9 @@ except Exception:
 def test_csv_loading():
     if pd is None:
         pytest.skip('pandas not available')
-    df = pd.read_csv('models/positive_hits_features.csv', nrows=5)
+    df = pd.read_csv('tests/sample_features.csv')
     assert 'priv_hex' in df.columns
-    assert len(df) <= 5
+    assert len(df) > 0
 
 
 def test_feature_extraction():

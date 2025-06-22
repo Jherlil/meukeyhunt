@@ -65,12 +65,11 @@ static std::mutex score_mutex_g; // Mutex separado para recent_scores_g
 
 // --- Implementação de combined_key_score (heurística) ---
 float combined_key_score(const std::string& s) {
-    std::cout << "[DEBUG CSCORE] Entrando em combined_key_score para: " << s.substr(0, std::min((size_t)8, s.length())) << "..." << std::endl; std::cout.flush();
-    if (s.empty()) {std::cout << "[DEBUG CSCORE] String vazia, retornando 0.0" << std::endl; std::cout.flush(); return 0.0f;}
+    if (s.empty()) { return 0.0f; }
     try {
         uLongf compressed_len = compressBound(s.length());
         std::vector<unsigned char> compressed_data(compressed_len);
-        if (s.length() == 0) {std::cout << "[DEBUG CSCORE] s.length() == 0, retornando 0.0" << std::endl; std::cout.flush(); return 0.0f;}
+        if (s.length() == 0) { return 0.0f; }
         if (compress(compressed_data.data(), &compressed_len, (const Bytef*)s.c_str(), s.length()) != Z_OK) {
             std::cerr << "[ML DEBUG CSCORE] Erro zlib compress para: " << s << std::endl; std::cerr.flush();
             return 0.0f;
@@ -141,10 +140,9 @@ float combined_key_score(const std::string& s) {
             w_run_length * (1.0f - run_length_feat)
         );
         float total_weights = w_kolmogorov + w_repetition + w_divisibility + w_run_length;
-        if (total_weights == 0.0f) {std::cout << "[DEBUG CSCORE] Total weights zero, retornando 0.0" << std::endl; std::cout.flush(); return 0.0f;}
+        if (total_weights == 0.0f) { return 0.0f; }
 
         float final_score = std::min(std::max(score_val / total_weights, 0.0f), 1.0f);
-        std::cout << "[DEBUG CSCORE] Saindo de combined_key_score com score: " << final_score << std::endl; std::cout.flush();
         return final_score;
     } catch (const std::exception& e) {
         std::cerr << "[ML] Erro em combined_key_score para '" << s << "': " << e.what() << std::endl; std::cerr.flush();
@@ -153,10 +151,8 @@ float combined_key_score(const std::string& s) {
 }
 
 float evaluate_mlp(const std::vector<float>& features) {
-    std::cout << "[DEBUG EVAL_MLP_G] Entrando..." << std::endl; std::cout.flush();
-    if (!mlp_g_loaded) {std::cout << "[DEBUG EVAL_MLP_G] MLP global não carregado." << std::endl; std::cout.flush(); return 0.0f;}
+    if (!mlp_g_loaded) { return 0.0f; }
     if (features.size() != INPUT_DIM_FEATURES) {
-        std::cout << "[DEBUG EVAL_MLP_G] Tamanho incorreto de features: " << features.size() << std::endl; std::cout.flush();
         return 0.0f;
     }
     try {
@@ -165,17 +161,14 @@ float evaluate_mlp(const std::vector<float>& features) {
         inputs_vec.push_back(input_tensor);
         at::Tensor output = mlp_model_global.forward(inputs_vec).toTensor();
         float score = output.item<float>();
-        std::cout << "[DEBUG EVAL_MLP_G] Score: " << score << std::endl; std::cout.flush();
         return score;
     } catch (const c10::Error& e) { std::cerr << "[ML] Erro c10 (LibTorch) MLP Global: " << e.what() << std::endl; std::cerr.flush(); return 0.0f; }
     catch (const std::exception& e) {std::cerr << "[ML] Erro std::exception MLP Global: " << e.what() << std::endl; std::cerr.flush(); return 0.0f;}
 }
 
 float evaluate_autoencoder(const std::vector<float>& features) {
-    std::cout << "[DEBUG EVAL_AE_G] Entrando..." << std::endl; std::cout.flush();
-    if (!ae_g_loaded) {std::cout << "[DEBUG EVAL_AE_G] AE global não carregado." << std::endl; std::cout.flush(); return 0.0f;}
+    if (!ae_g_loaded) { return 0.0f; }
     if (features.size() != INPUT_DIM_FEATURES) {
-        std::cout << "[DEBUG EVAL_AE_G] Tamanho incorreto de features: " << features.size() << std::endl; std::cout.flush();
         return 0.0f;
     }
     try {
@@ -185,17 +178,14 @@ float evaluate_autoencoder(const std::vector<float>& features) {
         at::Tensor reconstructed_tensor = autoencoder_model_global.forward(inputs_vec).toTensor();
         torch::Tensor loss = torch::mse_loss(reconstructed_tensor, input_tensor);
         float loss_val = loss.item<float>();
-        std::cout << "[DEBUG EVAL_AE_G] Loss: " << loss_val << std::endl; std::cout.flush();
         return loss_val;
     } catch (const c10::Error& e) { std::cerr << "[ML] Erro c10 (LibTorch) Autoencoder Global: " << e.what() << std::endl; std::cerr.flush(); return 0.0f; }
     catch (const std::exception& e) {std::cerr << "[ML] Erro std::exception Autoencoder Global: " << e.what() << std::endl; std::cerr.flush(); return 0.0f;}
 }
 
 float evaluate_xgboost(const std::vector<float>& features) {
-    std::cout << "[DEBUG EVAL_XGB_G] Entrando..." << std::endl; std::cout.flush();
-    if (!xgb_loaded || xgboost_model == nullptr) {std::cout << "[DEBUG EVAL_XGB_G] XGBoost não carregado." << std::endl; std::cout.flush(); return 0.0f;}
+    if (!xgb_loaded || xgboost_model == nullptr) { return 0.0f; }
     if (features.size() != INPUT_DIM_FEATURES) {
-        std::cout << "[DEBUG EVAL_XGB_G] Tamanho incorreto de features: " << features.size() << std::endl; std::cout.flush();
         return 0.0f;
     }
     DMatrixHandle dmat;
@@ -207,27 +197,23 @@ float evaluate_xgboost(const std::vector<float>& features) {
     if (XGBoosterPredict(xgboost_model, dmat, 0, 0, 0, &out_len, &out_result) != 0) {
         std::cerr << "[ML] Erro prever XGBoost: " << XGBGetLastError() << std::endl; std::cerr.flush(); XGDMatrixFree(dmat); return 0.0f;
     }
-    if (out_len == 0 || out_result == nullptr) { XGDMatrixFree(dmat); std::cout << "[DEBUG EVAL_XGB_G] Sem resultado." << std::endl; std::cout.flush(); return 0.0f; }
+    if (out_len == 0 || out_result == nullptr) { XGDMatrixFree(dmat); return 0.0f; }
     float score = out_result[0];
     XGDMatrixFree(dmat);
-    std::cout << "[DEBUG EVAL_XGB_G] Score: " << score << std::endl; std::cout.flush();
     return score;
 }
 
 float evaluate_lightgbm(const std::vector<float>& features) {
-    std::cout << "[DEBUG EVAL_LGBM_G] Entrando..." << std::endl; std::cout.flush();
-    if (!lgb_loaded || lightgbm_model == nullptr) {std::cout << "[DEBUG EVAL_LGBM_G] LightGBM não carregado." << std::endl; std::cout.flush(); return 0.0f;}
+    if (!lgb_loaded || lightgbm_model == nullptr) { return 0.0f; }
     if (features.size() != INPUT_DIM_FEATURES) {
-        std::cout << "[DEBUG EVAL_LGBM_G] Tamanho incorreto de features: " << features.size() << std::endl; std::cout.flush();
         return 0.0f;
     }
     double out_result_lgbm[1];
     int64_t out_len_lgbm = 0;
     int status = LGBM_BoosterPredictForMat(lightgbm_model, static_cast<const void*>(features.data()), C_API_DTYPE_FLOAT32, 1, static_cast<int>(features.size()), 1, C_API_PREDICT_NORMAL, 0, -1, "num_threads=1", &out_len_lgbm, out_result_lgbm);
     if (status != 0) { std::cerr << "[ML] Erro prever LightGBM. Código: " << status << ". Mensagem: " << LGBM_GetLastError() << std::endl; std::cerr.flush(); return 0.0f; }
-    if (out_len_lgbm == 0) { std::cout << "[DEBUG EVAL_LGBM_G] Sem resultado." << std::endl; std::cout.flush(); return 0.0f; }
+    if (out_len_lgbm == 0) { return 0.0f; }
     float score = static_cast<float>(out_result_lgbm[0]);
-    std::cout << "[DEBUG EVAL_LGBM_G] Score: " << score << std::endl; std::cout.flush();
     return score;
 }
 
@@ -481,33 +467,25 @@ float MLEngine::ml_predict(const std::vector<float>& features_vec) {
 }
 
 float MLEngine::ml_score(const FeatureSet& f) {
-    std::cout << "[DEBUG ML_ENGINE_SCORE] Entrando..." << std::endl; std::cout.flush();
     std::vector<float> features_vec = f.to_vector();
     if (features_vec.empty() || features_vec.size() != INPUT_DIM_FEATURES) {
-        std::cout << "[DEBUG ML_ENGINE_SCORE] Vetor de features inválido. Tamanho: " << features_vec.size() << std::endl; std::cout.flush();
         return 0.0f;
     }
 
     float score_pytorch_main_cls = 0.0f;
     if (MLEngine::is_initialized) {
-        std::cout << "[DEBUG ML_ENGINE_SCORE] Calculando score_pytorch_main_cls..." << std::endl; std::cout.flush();
         score_pytorch_main_cls = MLEngine::ml_predict(features_vec);
     }
 
     float score_heuristico = 0.0f;
     if (!f.s_priv_hex.empty()) {
-         std::cout << "[DEBUG ML_ENGINE_SCORE] Calculando score_heuristico..." << std::endl; std::cout.flush();
          score_heuristico = ::combined_key_score(f.s_priv_hex);
     }
 
     float score_mlp_g_aux = mlp_g_loaded ? ::evaluate_mlp(features_vec) : 0.0f;
-    std::cout << "[DEBUG ML_ENGINE_SCORE] score_mlp_g_aux: " << score_mlp_g_aux << std::endl; std::cout.flush();
     float score_ae_loss_g_aux = ae_g_loaded ? ::evaluate_autoencoder(features_vec) : 0.0f;
-    std::cout << "[DEBUG ML_ENGINE_SCORE] score_ae_loss_g_aux: " << score_ae_loss_g_aux << std::endl; std::cout.flush();
     float score_xgb_g_aux = xgb_loaded ? ::evaluate_xgboost(features_vec) : 0.0f;
-    std::cout << "[DEBUG ML_ENGINE_SCORE] score_xgb_g_aux: " << score_xgb_g_aux << std::endl; std::cout.flush();
     float score_lgbm_g_aux = lgb_loaded ? ::evaluate_lightgbm(features_vec) : 0.0f;
-    std::cout << "[DEBUG ML_ENGINE_SCORE] score_lgbm_g_aux: " << score_lgbm_g_aux << std::endl; std::cout.flush();
 
     float score_cnn_g = 0.0f;
     if (cnn_g_loaded) {
@@ -517,7 +495,6 @@ float MLEngine::ml_score(const FeatureSet& f) {
             score_cnn_g = MLEngine::ml_run_cnn(f.wif);
         }
     }
-    std::cout << "[DEBUG ML_ENGINE_SCORE] score_cnn_g: " << score_cnn_g << std::endl; std::cout.flush();
 
     float w_pytorch_cls  = 0.30f;
     float w_heuristico   = 0.10f;
@@ -544,23 +521,18 @@ float MLEngine::ml_score(const FeatureSet& f) {
     if (total_weight <= 1e-5f) return 0.0f; 
 
     float final_combined_score = std::min(std::max(combined_score_val / total_weight, 0.0f), 1.0f);
-    std::cout << "[DEBUG ML_ENGINE_SCORE] Saindo com resultado: " << final_combined_score << std::endl; std::cout.flush();
     return final_combined_score;
 }
 
 float MLEngine::ml_xgboost_score(const FeatureSet& f) {
-    std::cout << "[DEBUG ML_ENGINE_XGB] Entrando..." << std::endl; std::cout.flush();
     if (!xgb_loaded) {
-        std::cout << "[DEBUG ML_ENGINE_XGB] XGBoost não carregado." << std::endl; std::cout.flush();
         return 0.0f;
     }
     std::vector<float> features_vec = f.to_vector();
     if (features_vec.empty() || features_vec.size() != INPUT_DIM_FEATURES) {
-        std::cout << "[DEBUG ML_ENGINE_XGB] Vetor de features inválido. Tamanho: " << features_vec.size() << std::endl; std::cout.flush();
         return 0.0f;
     }
     float score = ::evaluate_xgboost(features_vec);
-    std::cout << "[DEBUG ML_ENGINE_XGB] Saindo com score: " << score << std::endl; std::cout.flush();
     return score;
 }
 

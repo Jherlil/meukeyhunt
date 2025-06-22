@@ -87,7 +87,14 @@ std::vector<std::string> query_promising_keys(size_t n) {
     std::string best = RLAgent::best_key();
     if (!best.empty()) result.push_back(best);
 
-    // 2) complementa com chaves de generated_keys.txt, se existir
+    // 2) outras chaves do histórico do RLAgent (mais recentes)
+    auto mem = RLAgent::top_candidates(n);
+    for (const auto& f : mem) {
+        if (result.size() >= n) break;
+        if (!f.s_priv_hex.empty()) result.push_back(f.s_priv_hex);
+    }
+
+    // 3) complementa com chaves de generated_keys.txt, se existir
     std::ifstream fin("generated_keys.txt");
     std::string line;
     while (result.size() < n && std::getline(fin, line)) {

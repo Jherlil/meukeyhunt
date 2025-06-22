@@ -109,3 +109,14 @@ std::string RLAgent::best_key() {
 float RLAgent::best_key_score() {
     return best_score_value;
 }
+
+std::vector<FeatureSet> RLAgent::top_candidates(size_t n) {
+    std::vector<FeatureSet> out;
+    if (n == 0) return out;
+    size_t count = 0;
+    for (auto it = memory.rbegin(); it != memory.rend() && count < n; ++it) {
+        out.push_back(it->first);
+        ++count;
+    }
+    return out;
+}

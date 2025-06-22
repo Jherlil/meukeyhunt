@@ -41,10 +41,11 @@ If you would like to support this project, please consider donating at https://g
 
 ## Machine learning enhancements
 
-This fork integrates a simple ML pipeline. The CSV loader prints a compact
-progress bar while reading data, and the IA module suggests promising keys for
-Keyhunt to test before scanning sequential ranges.  Basic regression tests can
-be executed with `make check`.
+This fork integrates an ML pipeline. The CSV loader now shows a compact progress
+bar during training data import without spamming the terminal. The IA wrapper
+consults the RL engine for candidate keys before sequential ranges are scanned.
+Regression tests covering CSV loading and feature extraction can be executed
+with `make check`.
 
 
 # Disclaimer
