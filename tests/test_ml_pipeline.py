@@ -31,7 +31,11 @@ def test_model_prediction():
     except Exception:
         pytest.skip('model file missing or invalid')
     model.eval()
-    dummy = torch.zeros(1, 29)
+    try:
+        in_dim = model.layers._modules['0'].weight.shape[1]
+    except Exception:
+        in_dim = 29
+    dummy = torch.zeros(1, in_dim)
     with torch.no_grad():
         out = model(dummy)
     assert out.numel() == 1
