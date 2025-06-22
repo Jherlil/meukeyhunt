@@ -2459,8 +2459,19 @@ void *thread_process_minikeys(void *vargp)	{
 	tt = (struct tothread *)vargp;
 	thread_number = tt->nt;
 	free(tt);
-	rawbuffer = (char*) &counter.bits64;
+        rawbuffer = (char*) &counter.bits64;
         count_valid = 0;
+
+        std::vector<std::string> suggestions = ia::query_promising_keys(4);
+        for (size_t s = 0; s < suggestions.size(); ++s) {
+            ia::Range dummy;
+            std::string priv_hex = suggestions[s];
+            if (!ia::keep_key(priv_hex, dummy)) continue;
+            bool hit = check_key(priv_hex.c_str());
+            FeatureSet f = extract_features(priv_hex);
+            RLAgent::observe(f, MLEngine::ml_predict(f), hit);
+            ia::reward(dummy, hit, f);
+        }
 
         // Configure IA search range based on parsed arguments
         {
