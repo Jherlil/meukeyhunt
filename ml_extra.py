@@ -4,6 +4,7 @@ import math
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.pipeline import make_pipeline
+from statistics import median, mode
 try:
     from statsmodels.tsa.arima.model import ARIMA
 except Exception:
@@ -50,6 +51,39 @@ def mnemonic_index_vector(words: str, wordlist=None) -> np.ndarray:
     while len(result) < 12:
         result.append(-1)
     return np.array(result[:12], dtype=np.int32)
+
+# --- Numerical sequence utilities ---
+def diff_ratio_stats(seq):
+    arr = np.asarray(seq, dtype=np.float64)
+    if arr.size < 2:
+        return {}
+    diff = np.diff(arr)
+    ratio = np.divide(arr[1:], arr[:-1], out=np.zeros_like(diff), where=arr[:-1]!=0)
+    log_diff = np.diff(np.log(arr))
+    log2_diff = np.diff(np.log2(arr))
+    stats = {
+        'diff_mean': float(diff.mean()),
+        'diff_std': float(diff.std()),
+        'ratio_mean': float(ratio.mean()),
+        'ratio_std': float(ratio.std()),
+        'log_diff_mean': float(log_diff.mean()),
+        'log2_diff_mean': float(log2_diff.mean()),
+        'diff_median': float(median(diff)),
+        'diff_mode': float(mode(diff)) if len(diff) > 0 else 0.0,
+    }
+    return stats
+
+def fft_transform(seq):
+    arr = np.asarray(seq, dtype=np.float64)
+    return np.fft.fft(arr)
+
+def wavelet_transform(seq, wavelet='db1'):
+    try:
+        import pywt
+        arr = np.asarray(seq, dtype=np.float64)
+        return pywt.wavedec(arr, wavelet)
+    except Exception:
+        return []
 
 def extract_features(priv_hex: str, prev_hex: str = None, words: str = "", wordlist=None) -> np.ndarray:
     priv_int = int(priv_hex, 16) if priv_hex else 0

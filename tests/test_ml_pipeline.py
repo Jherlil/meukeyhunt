@@ -20,10 +20,17 @@ try:
 except Exception:
     extract_features_chunk = None
 try:
-    from ml_extra import extract_features, linear_regression
+    from ml_extra import (
+        extract_features,
+        linear_regression,
+        diff_ratio_stats,
+        fft_transform,
+    )
 except Exception:
     extract_features = None
     linear_regression = None
+    diff_ratio_stats = None
+    fft_transform = None
 
 
 def test_csv_loading():
@@ -72,3 +79,13 @@ def test_model_prediction():
     with torch.no_grad():
         out = model(dummy)
     assert out.numel() == 1
+
+
+def test_math_extras():
+    if np is None or diff_ratio_stats is None or fft_transform is None:
+        pytest.skip('math extras not available')
+    seq = np.array([1, 2, 4, 8], dtype=float)
+    stats = diff_ratio_stats(seq)
+    assert 'diff_mean' in stats
+    fft = fft_transform(seq)
+    assert len(fft) == len(seq)
