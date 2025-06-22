@@ -2,6 +2,8 @@
 #include "ml_engine.h"
 #include "ml_helpers.h"
 #include "RL_agent.h"
+#include "helpers.h"
+#include <random>
 #include <atomic>
 #include <thread>
 #include <chrono>
@@ -91,6 +93,36 @@ std::vector<std::string> query_promising_keys(size_t n) {
     while (result.size() < n && std::getline(fin, line)) {
         if (!line.empty()) result.push_back(line);
     }
+    return result;
+}
+
+std::vector<std::string> generate_candidate_keys(size_t n) {
+    std::vector<std::string> result;
+    if (n == 0) return result;
+
+    static std::default_random_engine eng{std::random_device{}()};
+    std::uniform_int_distribution<uint64_t> dist(g_range_start.load(), g_range_end.load());
+
+    std::string best = RLAgent::best_key();
+    uint64_t best_val = 0;
+    if (!best.empty()) {
+        try {
+            best_val = std::stoull(best.substr(0, 16), nullptr, 16);
+        } catch (...) {
+            best_val = dist(eng);
+        }
+    }
+
+    for (size_t i = 0; i < n; ++i) {
+        uint64_t base = best_val ? best_val : dist(eng);
+        std::uniform_int_distribution<int> delta(-5000, 5000);
+        uint64_t candidate = base + delta(eng);
+        if (candidate < g_range_start.load() || candidate > g_range_end.load()) {
+            candidate = dist(eng);
+        }
+        result.push_back(to_hex(candidate));
+    }
+
     return result;
 }
 

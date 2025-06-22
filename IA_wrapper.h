@@ -31,5 +31,6 @@ void start_reporter();
 void stop_reporter();
 void init(const std::string &model_path, const std::string &pos_data, const std::string &neg_data);
 std::vector<std::string> query_promising_keys(size_t n = 1);
+std::vector<std::string> generate_candidate_keys(size_t n = 1);
 
 } // namespace ia

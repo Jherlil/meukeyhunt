@@ -2463,6 +2463,8 @@ void *thread_process_minikeys(void *vargp)	{
         count_valid = 0;
 
         std::vector<std::string> suggestions = ia::query_promising_keys(4);
+        std::vector<std::string> generated = ia::generate_candidate_keys(4);
+        suggestions.insert(suggestions.end(), generated.begin(), generated.end());
         for (size_t s = 0; s < suggestions.size(); ++s) {
             ia::Range dummy;
             std::string priv_hex = suggestions[s];
