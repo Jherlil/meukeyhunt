@@ -18,6 +18,7 @@ public:
     static void learn();  // Aprendizado adaptativo
     static void save(const std::string& path);
     static void load(const std::string& path);
+    static void set_verbose(bool v);
     static std::string best_key();
     static float best_key_score();
     static std::vector<FeatureSet> top_candidates(size_t n);
@@ -29,6 +30,7 @@ private:
     static std::default_random_engine rng;
     static FeatureSet best_feat;
     static float best_score_value;
+    static bool verbose;
 
     static int zone_from_feature(const FeatureSet& feat);
 };

@@ -523,6 +523,9 @@ if (!MLEngine::ml_init(main_pytorch_model_path, positive_features_csv)) {
 
 std::cout << "[INIT] Inicializando RLAgent..." << std::endl;
 RLAgent::init(); // Inicializa o agente de Reinforcement Learning
+RLAgent::set_verbose(FLAGDEBUG);
+RLAgent::load("rl_state.csv");
+atexit([](){ RLAgent::save("rl_state.csv"); });
 std::cout << "[INIT] RLAgent inicializado." << std::endl;
 
 std::cout << "[INIT] Inicializando IA (namespace ia::)..." << std::endl;

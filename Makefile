@@ -113,7 +113,7 @@ check_py:
 	        python3 -m py_compile generate_keys.py autotrain.py train.py
 
 check: check_py
-	pytest -q tests/test_ml_pipeline.py test_model_load.py
+	pytest -q tests/test_ml_pipeline.py test_model_load.py tests/test_rl_integration.py
 
 train: check_py
 	python3 train_upgraded.py

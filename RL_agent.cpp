@@ -14,6 +14,10 @@ std::map<int, int> RLAgent::heatmap_counts;
 std::default_random_engine RLAgent::rng(std::random_device{}());
 FeatureSet RLAgent::best_feat;
 float RLAgent::best_score_value = -1.0f;
+bool RLAgent::verbose = false;
+static size_t learn_counter = 0;
+static const size_t print_interval = 10;
+static float last_report_best = -1.0f;
 
 void RLAgent::init() {
     memory.clear();
@@ -64,12 +68,24 @@ bool RLAgent::decide(const FeatureSet& feat) {
 }
 
 void RLAgent::learn() {
-    std::cout << "[RL] Aprendizado com " << memory.size() << " experiências." << std::endl;
-    std::cout << "[RL] Heatmap:" << std::endl;
-    for (const auto& [zone, score] : heatmap) {
-        int count = heatmap_counts[zone];
-        std::cout << "  Zona " << std::setw(2) << zone << ": média=" << std::fixed << std::setprecision(2) << score
-                  << " (" << count << " amostras)" << std::endl;
+    learn_counter++;
+    bool report = false;
+    if (best_score_value > last_report_best + 1e-6) {
+        report = true;
+        last_report_best = best_score_value;
+    }
+    if (learn_counter % print_interval == 0) {
+        report = true;
+    }
+
+    if (verbose && report) {
+        std::cout << "[RL] Aprendizado com " << memory.size() << " experiências." << std::endl;
+        std::cout << "[RL] Heatmap:" << std::endl;
+        for (const auto& [zone, score] : heatmap) {
+            int count = heatmap_counts[zone];
+            std::cout << "  Zona " << std::setw(2) << zone << ": média=" << std::fixed << std::setprecision(2) << score
+                      << " (" << count << " amostras)" << std::endl;
+        }
     }
 }
 
@@ -119,4 +135,8 @@ std::vector<FeatureSet> RLAgent::top_candidates(size_t n) {
         ++count;
     }
     return out;
+}
+
+void RLAgent::set_verbose(bool v) {
+    verbose = v;
 }

@@ -605,13 +605,13 @@ bool MLEngine::ml_load_training_data(const std::string& path, bool positive_para
                     loaded_count_local++;
                     // dados válidos adicionados
                 } else {
-                     std::cerr << "[ML WARNING LOAD_TRAIN] Linha " << line_count_local << ": Tamanho de features incorreto (" << feats_csv_local.size() << "), esperado " << INPUT_DIM_FEATURES << ". PrivHex: " << s_priv_hex_csv.substr(0,10) << "..." << std::endl; std::cerr.flush();
+                     /* verbose warning removed */
                 }
-            } catch (const std::exception& e) { 
-                std::cerr << "[ML ERROR LOAD_TRAIN_LOOP] Exceção ao processar linha " << line_count_local << " (PrivHex: " << s_priv_hex_csv.substr(0,10) << "...): " << e.what() << std::endl; std::cerr.flush(); 
+            } catch (const std::exception& e) {
+                /* verbose error removed */
             }
-        } else if (!line.empty()) { 
-            std::cerr << "[ML WARNING LOAD_TRAIN_LOOP] Linha " << line_count_local << " não pode ser completamente parseada (colunas insuficientes?): [" << line << "]" << std::endl; std::cerr.flush();
+        } else if (!line.empty()) {
+            /* verbose parse warning removed */
         }
     }
     std::cout << std::endl;

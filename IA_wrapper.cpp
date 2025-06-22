@@ -9,6 +9,9 @@
 #include <chrono>
 #include <iostream>
 #include <fstream>
+#include <sstream>
+#include <cctype>
+#include <vector>
 
 namespace ia {
 
@@ -18,6 +21,8 @@ static std::atomic<uint64_t> g_range_start(1);
 static std::atomic<uint64_t> g_range_end(0xFFFFFFFFULL);
 static std::atomic<uint64_t> g_stride(1);
 static std::atomic<uint64_t> g_current(1);
+static std::vector<int> nibble_hist(16, 1);
+static bool hist_loaded = false;
 
 float combined_key_score(const std::string &privkey_hex) {
     FeatureSet f = extract_features(privkey_hex);
@@ -73,10 +78,31 @@ void stop_reporter() {
     g_stop_reporter.store(true);
 }
 
+static void load_hist_from_csv(const std::string& pos_csv) {
+    if (hist_loaded) return;
+    std::ifstream in(pos_csv);
+    if (!in.is_open()) return;
+    std::string line;
+    std::getline(in, line); // header
+    while (std::getline(in, line)) {
+        if (line.empty()) continue;
+        std::stringstream ss(line);
+        std::string priv_hex;
+        if (std::getline(ss, priv_hex, ',')) {
+            char c = std::tolower(priv_hex[0]);
+            int idx = (c >= '0' && c <= '9') ? c - '0' :
+                      (c >= 'a' && c <= 'f') ? c - 'a' + 10 : -1;
+            if (idx >= 0) nibble_hist[idx]++;
+        }
+    }
+    hist_loaded = true;
+}
+
 void init(const std::string &model_path, const std::string &pos_data, const std::string &neg_data) {
     MLEngine::ml_init(model_path, pos_data);
     MLEngine::ml_load_training_data(pos_data, true);
     MLEngine::ml_load_training_data(neg_data, false);
+    load_hist_from_csv(pos_data);
 }
 
 std::vector<std::string> query_promising_keys(size_t n) {
@@ -109,6 +135,7 @@ std::vector<std::string> generate_candidate_keys(size_t n) {
 
     static std::default_random_engine eng{std::random_device{}()};
     std::uniform_int_distribution<uint64_t> dist(g_range_start.load(), g_range_end.load());
+    std::discrete_distribution<int> nibble_dist(nibble_hist.begin(), nibble_hist.end());
 
     std::string best = RLAgent::best_key();
     uint64_t best_val = 0;
@@ -127,7 +154,11 @@ std::vector<std::string> generate_candidate_keys(size_t n) {
         if (candidate < g_range_start.load() || candidate > g_range_end.load()) {
             candidate = dist(eng);
         }
-        result.push_back(to_hex(candidate));
+        std::string hex = to_hex(candidate);
+        if (!hex.empty()) {
+            hex[0] = "0123456789abcdef"[nibble_dist(eng)];
+        }
+        result.push_back(hex);
     }
 
     return result;

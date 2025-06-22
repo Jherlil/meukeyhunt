@@ -533,6 +533,9 @@ std::cout << "[DEBUG] Depois de MLEngine::ml_init" << std::endl; std::cout.flush
 std::cout << "[DEBUG] Antes de RLAgent::init" << std::endl; std::cout.flush();
 std::cout << "[INIT] Inicializando RLAgent..." << std::endl; std::cout.flush();
 RLAgent::init();
+RLAgent::set_verbose(FLAGDEBUG);
+RLAgent::load("rl_state.csv");
+atexit([](){ RLAgent::save("rl_state.csv"); });
 std::cout << "[INIT] RLAgent inicializado." << std::endl; std::cout.flush();
 std::cout << "[DEBUG] Depois de RLAgent::init" << std::endl; std::cout.flush();
 

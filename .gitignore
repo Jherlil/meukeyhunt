@@ -43,6 +43,7 @@ tests/__pycache__/
 build.log
 *.patch
 *.diff
+rl_state.csv
 
 # Executables
 *.exe
