@@ -9,6 +9,7 @@
 #include <random>
 #include "ml_helpers.h"
 #include <map>
+#include <array>
 
 class RLAgent {
 public:
@@ -19,18 +20,22 @@ public:
     static void save(const std::string& path);
     static void load(const std::string& path);
     static void set_verbose(bool v);
+    static void set_params(float a, float g, float e);
     static std::string best_key();
     static float best_key_score();
     static std::vector<FeatureSet> top_candidates(size_t n);
 
 private:
     static std::vector<std::pair<FeatureSet, bool>> memory;
-    static std::map<int, float> heatmap;         // zone → sucesso médio
-    static std::map<int, int> heatmap_counts;    // zone → número de experiências
+    static std::map<int, std::array<float,2>> q_table; // Q-values por zona (skip, keep)
     static std::default_random_engine rng;
     static FeatureSet best_feat;
     static float best_score_value;
     static bool verbose;
+
+    static float alpha;
+    static float gamma;
+    static float epsilon;
 
     static int zone_from_feature(const FeatureSet& feat);
 };

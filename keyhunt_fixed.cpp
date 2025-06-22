@@ -20,6 +20,7 @@ email: albertobsd@gmail.com
 #include "IA_wrapper.h"
 #include "helpers.h"
 #include "RL_agent.h"
+#include "ml_engine.h"
 #include <iostream> 
 #include <sstream>   
 
@@ -536,6 +537,7 @@ std::cout << "[INIT] Inicializando IA (namespace ia::)..." << std::endl;
 ia::init(main_pytorch_model_path, positive_features_csv, negative_features_csv);
 ia::start_reporter(); // Inicia o reporter da IA
 std::cout << "[INIT] Módulos de IA e RL prontos." << std::endl;
+ml_start_online_learning();
 
 // ... resto do seu código main ...
 

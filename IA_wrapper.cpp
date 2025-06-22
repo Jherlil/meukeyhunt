@@ -60,8 +60,12 @@ void set_range_limits(uint64_t start, uint64_t end, uint64_t stride) {
     g_current.store(start);
 }
 
-void reward(const Range &, bool, const FeatureSet &) {
-    // Aprendizado online ainda não implementado
+void reward(const Range &, bool hit, const FeatureSet &feat) {
+    float score = MLEngine::ml_score(feat);
+    RLAgent::observe(feat, score, hit);
+    if (hit) {
+        RLAgent::learn();
+    }
 }
 
 void start_reporter() {

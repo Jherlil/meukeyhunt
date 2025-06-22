@@ -47,7 +47,7 @@ public:
     // Deprecated ou não usado?
     // static bool ml_check_address(const unsigned char* address);
     // static std::vector<float> extract_address_features(const unsigned char* address);
-    // void ml_start_online_learning(); // Esta foi movida para global em ml_engine.cpp
+
 };
 
 // Definições inline para membros estáticos da classe
@@ -64,6 +64,7 @@ torch::Tensor prepare_base58_tensor(const std::string& input);
 // Função global para carregar modelos auxiliares (MLP, AE, XGB, LGBM)
 // A declaração deve estar aqui se você quiser chamá-la de fora de ml_engine.cpp,
 // caso contrário, pode ser apenas um protótipo dentro de ml_engine.cpp.
-bool load_models(const std::string& mlp_path); // mlp_path aqui pode ser o mesmo que model_path em ml_init
+bool load_models(const std::string& mlp_path);
+void ml_start_online_learning(); 
 
 #endif // ML_ENGINE_H

@@ -22,6 +22,7 @@
 #include <thread>
 #include <chrono>
 #include <iomanip>
+#include <cstdio>
 #include <set>
 #include <zlib.h>
 #include <gmpxx.h>
@@ -621,9 +622,25 @@ bool MLEngine::ml_load_training_data(const std::string& path, bool positive_para
 }
 
 void MLEngine::ml_update_model(const unsigned char* address, bool is_hit) {
-    std::cout << "[DEBUG ML_ENGINE_UPDATE] Entrando..." << std::endl; std::cout.flush();
-    // Seu código aqui
-    std::cout << "[DEBUG ML_ENGINE_UPDATE] Saindo." << std::endl; std::cout.flush();
+    std::lock_guard<std::mutex> lock(ml_mutex);
+    if (!is_initialized || train_data.empty()) return;
+    try {
+        std::vector<float> flat;
+        for (const auto& row : train_data) flat.insert(flat.end(), row.begin(), row.end());
+        torch::Tensor data = torch::from_blob(flat.data(), {(long)train_data.size(), INPUT_DIM_FEATURES}, torch::kFloat32).clone();
+        torch::Tensor labels = torch::from_blob(train_labels.data(), {(long)train_labels.size(),1}, torch::kFloat32).clone();
+        static torch::optim::SGD opt(model.parameters(), torch::optim::SGDOptions(0.001));
+        model.train();
+        opt.zero_grad();
+        auto out = model.forward({data}).toTensor();
+        auto loss = torch::binary_cross_entropy(out, labels);
+        loss.backward();
+        opt.step();
+        model.eval();
+        std::cout << "[ML] Modelo atualizado com " << train_data.size() << " exemplos." << std::endl;
+    } catch (const std::exception& e) {
+        std::cerr << "[ML] Erro em ml_update_model: " << e.what() << std::endl;
+    }
 }
 
 void MLEngine::ml_report_heatmap() {
@@ -718,9 +735,26 @@ float MLEngine::ml_recent_score_avg()     { return ::ml_recent_score_avg_global(
 
 void ml_online_learning_loop() {
     std::cout << "[DEBUG ONLINE_LEARN_LOOP] Thread de aprendizado online iniciada." << std::endl; std::cout.flush();
-     while (true) {
+    const std::string buffer_csv = "models/online_samples.csv";
+    bool loaded_once = false;
+    while (true) {
         std::this_thread::sleep_for(std::chrono::seconds(30));
-        MLEngine::ml_report_heatmap(); 
+        if (std::filesystem::exists(buffer_csv)) {
+            MLEngine::ml_load_training_data(buffer_csv, true);
+            std::remove(buffer_csv.c_str());
+            loaded_once = true;
+        }
+        if (loaded_once) {
+            std::lock_guard<std::mutex> lock(ml_mutex);
+            size_t n = std::min(train_data.size(), train_labels.size());
+            for (size_t i = 0; i < n; ++i) {
+                bool hit = train_labels[i] > 0.5f;
+                MLEngine::ml_update_model(nullptr, hit);
+            }
+            train_data.clear();
+            train_labels.clear();
+        }
+        MLEngine::ml_report_heatmap();
     }
 }
 

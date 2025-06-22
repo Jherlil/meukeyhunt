@@ -20,6 +20,7 @@ email: albertobsd@gmail.com
 #include "IA_wrapper.h"
 #include "helpers.h"
 #include "RL_agent.h"
+#include "ml_engine.h"
 #include <iostream>
 #include <sstream>
 #include <iomanip>
@@ -549,6 +550,7 @@ std::cout << "[DEBUG] Depois de ia::init" << std::endl; std::cout.flush();
 std::cout << "[DEBUG] Antes de ia::start_reporter" << std::endl; std::cout.flush();
 ia::start_reporter();
 std::cout << "[INIT] Módulos de IA e RL prontos." << std::endl; std::cout.flush();
+ml_start_online_learning();
 std::cout << "[DEBUG] Depois de ia::start_reporter e pronto para processar argumentos." << std::endl; std::cout.flush();
 
 
@@ -2474,7 +2476,6 @@ void *thread_process_minikeys(void *vargp)	{
             if (!ia::keep_key(priv_hex, dummy)) continue;
             bool hit = check_key(priv_hex.c_str());
             FeatureSet f = extract_features(priv_hex);
-            RLAgent::observe(f, MLEngine::ml_predict(f), hit);
             ia::reward(dummy, hit, f);
         }
 
@@ -2529,14 +2530,9 @@ while (true) {
 
         // --- Verifica se é hit real ---
         bool hit = check_key(priv_hex.c_str());
-        if (hit) {
-            ia::reward(cur, true, f);  // Recompensa por acerto
-        }
+        ia::reward(cur, hit, f);
 
-        #pragma omp critical
-        {
-            RLAgent::observe(f, score, hit);
-        }
+        (void)score; // score já utilizado em ia::reward
     }
 
     RLAgent::learn();
