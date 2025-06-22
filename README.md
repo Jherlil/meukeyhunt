@@ -39,6 +39,13 @@ This code is free of charge, see the licence for more details. https://github.co
 Although this project is a hobby for me, it still involves a considerable amount of work.
 If you would like to support this project, please consider donating at https://github.com/albertobsd/keyhunt#donations.
 
+## Machine learning enhancements
+
+This fork integrates a simple ML pipeline. The CSV loader prints a compact
+progress bar while reading data, and the IA module suggests promising keys for
+Keyhunt to test before scanning sequential ranges.  Basic regression tests can
+be executed with `make check`.
+
 
 # Disclaimer
 
