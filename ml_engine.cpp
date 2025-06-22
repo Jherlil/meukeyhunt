@@ -8,6 +8,8 @@
 #include <torch/script.h>
 #include <iostream>
 #include <fstream>
+#include <iomanip>
+#include <filesystem>
 #include <vector>
 #include <string>
 #include <cmath>
@@ -565,6 +567,13 @@ float MLEngine::ml_xgboost_score(const FeatureSet& f) {
 bool MLEngine::ml_load_training_data(const std::string& path, bool positive_param) {
     // Carregamento de dados pode gerar milhares de linhas; limite a verbosidade
     const int progress_interval = 50000; // Atualiza a cada 50k linhas
+    std::uintmax_t total_bytes = 0;
+    try {
+        total_bytes = std::filesystem::file_size(path);
+    } catch (...) {
+        total_bytes = 0;
+    }
+    size_t last_percent = 0;
     // std::lock_guard<std::mutex> lock(ml_mutex); // REMOVIDO - ml_mutex já está bloqueado por ml_init
     
     std::ifstream data_file(path);
@@ -584,7 +593,19 @@ bool MLEngine::ml_load_training_data(const std::string& path, bool positive_para
     while (std::getline(data_file, line)) {
         line_count_local++;
         if (line_count_local % progress_interval == 0) {
-            std::cout << "\r[ML] " << line_count_local << " linhas lidas..." << std::flush;
+            std::streampos pos = data_file.tellg();
+            if (pos == std::streampos(-1)) pos = 0;
+            size_t percent = 0;
+            if (total_bytes > 0)
+                percent = static_cast<size_t>(100.0 * static_cast<double>(pos) / static_cast<double>(total_bytes));
+            if (percent != last_percent) {
+                const size_t bar_width = 40;
+                size_t filled = percent * bar_width / 100;
+                std::cout << "\r[ML] [";
+                for (size_t i = 0; i < bar_width; ++i) std::cout << (i < filled ? '#' : '-');
+                std::cout << "] " << std::setw(3) << percent << "% (" << line_count_local << " linhas)" << std::flush;
+                last_percent = percent;
+            }
         }
 
         while (!line.empty() && (line.back() == '\r' || line.back() == '\n')) line.pop_back();
