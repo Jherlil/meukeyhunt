@@ -38,6 +38,9 @@ VANITYKEYFOUND.txt
 *.so
 *.so.*
 *.dylib
+build.log
+*.patch
+*.diff
 
 # Executables
 *.exe
