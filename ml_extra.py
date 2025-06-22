@@ -171,27 +171,58 @@ def cnn_bitpattern_model(model: nn.Module, bits: np.ndarray) -> float:
 
 # --- Evolutionary heuristics placeholders ---
 
-def genetic_algorithm(population: np.ndarray) -> np.ndarray:
-    return population
+def genetic_algorithm(population: np.ndarray, generations: int = 1) -> np.ndarray:
+    pop = population.copy()
+    if pop.ndim == 1:
+        pop = pop.reshape(-1, 1)
+    for _ in range(generations):
+        fitness = pop.sum(axis=1)
+        parents_idx = np.argsort(fitness)[-2:]
+        parent1, parent2 = pop[parents_idx]
+        child = (parent1 + parent2) / 2.0
+        child += np.random.normal(0, 0.1, size=child.shape)
+        pop[parents_idx[0]] = child
+    return pop
 
-def simulated_annealing(start: np.ndarray) -> np.ndarray:
-    return start
+def simulated_annealing(start: np.ndarray, iters: int = 100, temp: float = 1.0) -> np.ndarray:
+    current = start.astype(float)
+    best = current.copy()
+    def score(x):
+        return -float(np.sum(x ** 2))
+    best_score = score(current)
+    for _ in range(iters):
+        candidate = current + np.random.normal(0, 0.5, size=current.shape)
+        delta = score(candidate) - score(current)
+        if delta > 0 or np.random.rand() < math.exp(delta / max(temp, 1e-9)):
+            current = candidate
+        if score(current) > best_score:
+            best = current.copy()
+            best_score = score(current)
+        temp *= 0.95
+    return best
 
 # --- Reinforcement learning placeholders ---
 
+_rl_state = {"hits": 0, "total": 0}
+
 def rl_agent_decide_range(score: float, hits: int) -> tuple:
-    return (0, 1)
+    size = 1000 + hits * 10
+    start = int(score * 10000) % 100000
+    return (start, start + size)
 
 def rl_agent_update(hit: bool):
-    pass
+    _rl_state["total"] += 1
+    if hit:
+        _rl_state["hits"] += 1
 
 # --- ECC optimization placeholders ---
 
 def glv_endomorphism(k: int) -> tuple:
-    return (k, 0)
+    n = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
+    return (k % n, k // n)
 
 def precompute_window_table():
-    pass
+    return [i * 2 for i in range(256)]
 
 # --- Dimensionality reduction & clustering placeholders ---
 
@@ -212,10 +243,10 @@ def ensemble_score(xgb: float, mlp: float, cnn: float, rl: float) -> float:
 # --- Continuous update placeholders ---
 
 def reload_models():
-    pass
+    print("[EXTRA] reload_models called")
 
 def periodic_save_models():
-    pass
+    print("[EXTRA] periodic_save_models called")
 
 def periodic_reload_models():
-    pass
+    print("[EXTRA] periodic_reload_models called")

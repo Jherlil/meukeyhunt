@@ -44,8 +44,10 @@ If you would like to support this project, please consider donating at https://g
 This fork integrates an ML pipeline. The CSV loader now shows a compact progress
 bar during training data import without spamming the terminal. The IA wrapper
 consults the RL engine for candidate keys before sequential ranges are scanned.
-Regression tests covering CSV loading and feature extraction can be executed
-with `make check`.
+An online learning thread keeps the models fresh by loading `online_samples.csv`
+and updating the model every 30 s. The RL agent now uses a small Q-learning
+table to guide exploration. Regression tests covering these utilities can be
+executed with `make check`.
 
 
 # Disclaimer

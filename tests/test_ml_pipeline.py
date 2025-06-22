@@ -25,6 +25,10 @@ try:
         linear_regression,
         diff_ratio_stats,
         fft_transform,
+        genetic_algorithm,
+        simulated_annealing,
+        rl_agent_decide_range,
+        rl_agent_update,
     )
 except Exception:
     extract_features = None
@@ -89,3 +93,16 @@ def test_math_extras():
     assert 'diff_mean' in stats
     fft = fft_transform(seq)
     assert len(fft) == len(seq)
+
+
+def test_extra_algorithms():
+    if np is None:
+        pytest.skip('numpy not available')
+    pop = np.random.rand(4, 3)
+    new_pop = genetic_algorithm(pop, generations=2)
+    assert new_pop.shape == pop.shape
+    sa = simulated_annealing(np.array([0.0, 0.0]))
+    assert sa.shape[0] == 2
+    start, end = rl_agent_decide_range(0.5, 2)
+    assert end > start
+    rl_agent_update(True)
