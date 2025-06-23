@@ -714,7 +714,11 @@ def main_train_loop():
 
     # Carregar dados e extrair features para modelos tabulares.
     # A função load_data_with_feature_extraction agora retorna X_features, y_labels, e o df_full original.
-    X_pos_tab, y_pos_tab, df_pos_full_original = load_data_with_feature_extraction("models/positive_hits_features.csv")
+    pos_default = "models/positive_hits_features.csv"
+    pos_aug = "models/positive_hits_features_augmented.csv"
+    pos_path = pos_aug if os.path.exists(pos_aug) else pos_default
+    print(f"[Train] Carregando dados positivos de {pos_path} ...")
+    X_pos_tab, y_pos_tab, df_pos_full_original = load_data_with_feature_extraction(pos_path)
     if df_pos_full_original is not None and not df_pos_full_original.empty:
         df_all_for_cnn_source_data.append(df_pos_full_original)
 

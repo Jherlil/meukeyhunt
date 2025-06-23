@@ -116,6 +116,7 @@ check: check_py
 	pytest -q tests/test_ml_pipeline.py test_model_load.py tests/test_rl_integration.py
 
 train: check_py
+	python3 mutate_hits.py
 	python3 train_upgraded.py
 
 autotrain: check_py
