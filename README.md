@@ -49,6 +49,21 @@ and updating the model every 30 s. The RL agent now uses a small Q-learning
 table to guide exploration. Regression tests covering these utilities can be
 executed with `make check`.
 
+### Dataset augmentation
+
+The script `mutate_hits.py` generates extra positive samples by flipping random
+bits of known hits. The `make train` target calls this script before running
+`train_upgraded.py` so that training can leverage the augmented dataset if the
+original file `models/positive_hits_features.csv` exists. When present, the
+augmented file `models/positive_hits_features_augmented.csv` is loaded
+automatically during training.
+
+### Reinforcement learning module
+
+The RL agent relies on the header-only library **RLtools**. It is retrieved from
+GitHub by `install_dependencies.sh` and provides simple Q-learning utilities
+used to guide the search range selection.
+
 
 # Disclaimer
 

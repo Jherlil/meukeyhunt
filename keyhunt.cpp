@@ -2484,7 +2484,13 @@ void *thread_process_minikeys(void *vargp)	{
                 char* s_str = n_range_start.GetBase10();
                 char* e_str = n_range_end.GetBase10();
                 char* st_str = stride.GetBase10();
-                ia::set_range_limits(strtoull(s_str, nullptr, 10), strtoull(e_str, nullptr, 10), strtoull(st_str, nullptr, 10));
+                ia::set_range_limits(strtoull(s_str, nullptr, 10),
+                                    strtoull(e_str, nullptr, 10),
+                                    strtoull(st_str, nullptr, 10));
+                printf("[IA] Range 0x%llx - 0x%llx (stride %llu)\n",
+                       (unsigned long long)ia::get_range_start(),
+                       (unsigned long long)ia::get_range_end(),
+                       (unsigned long long)ia::get_stride());
                 free(s_str); free(e_str); free(st_str);
         }
 
@@ -2507,6 +2513,19 @@ while (true) {
 
         // --- Extração e avaliação de features pela IA ---
         FeatureSet f = extract_features(priv_hex);
+
+        // --- Consulta ao agente RL para decidir se segue com a chave ---
+        if (!RLAgent::decide(f)) {
+            continue; // pular chave sem gastar processamento
+        }
+
+        // --- Exibir a chave atualmente processada ---
+        #pragma omp critical
+        {
+            printf("\r[IA KEY] %s\033[K", priv_hex.c_str());
+            fflush(stdout);
+        }
+
         float score = MLEngine::ml_score(f);
         MLEngine::ml_push_score(score);
 
@@ -2516,7 +2535,8 @@ while (true) {
         }
 
         // --- Filtro por score (IA dita se continua ou pula) ---
-        printf("[IA DEBUG] Range 0x%llx - 0x%llx \342\206\222 Score: %.4f\n",
+        printf("[IA DEBUG] Key %s Range 0x%llx-0x%llx \342\206\222 Score: %.4f\n",
+               priv_hex.c_str(),
                (unsigned long long)cur.from,
                (unsigned long long)cur.to,
                score);
