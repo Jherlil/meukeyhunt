@@ -15,6 +15,7 @@
 class RLAgent {
 public:
     static constexpr int INPUT_DIM = 29;
+    static constexpr size_t BATCH_SIZE = 64;
     static void init();
     static void observe(const FeatureSet& feat, float score, bool hit);
     static bool decide(const FeatureSet& feat);

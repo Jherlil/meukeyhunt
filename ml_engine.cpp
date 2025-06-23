@@ -629,7 +629,13 @@ void MLEngine::ml_update_model(const unsigned char* address, bool is_hit) {
         for (const auto& row : train_data) flat.insert(flat.end(), row.begin(), row.end());
         torch::Tensor data = torch::from_blob(flat.data(), {(long)train_data.size(), INPUT_DIM_FEATURES}, torch::kFloat32).clone();
         torch::Tensor labels = torch::from_blob(train_labels.data(), {(long)train_labels.size(),1}, torch::kFloat32).clone();
-        static torch::optim::SGD opt(model.parameters(), torch::optim::SGDOptions(0.001));
+        static std::vector<torch::Tensor> params;
+        if (params.empty()) {
+            for (const auto& p : model.parameters()) {
+                params.push_back(p);
+            }
+        }
+        static torch::optim::SGD opt(params, torch::optim::SGDOptions(0.001));
         model.train();
         opt.zero_grad();
         auto out = model.forward({data}).toTensor();

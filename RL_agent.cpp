@@ -122,17 +122,18 @@ void RLAgent::learn() {
     }
 
     if (!memory.empty() && optimizer) {
-        torch::Tensor data = torch::empty({(long)memory.size(), INPUT_DIM});
-        torch::Tensor labels = torch::empty({(long)memory.size(), 1});
-        for (size_t i = 0; i < memory.size(); ++i) {
-            auto vec = memory[i].first.to_vector();
-            data[i] = torch::from_blob(vec.data(), {INPUT_DIM}, torch::kFloat32).clone();
-            labels[i][0] = memory[i].second ? 1.0f : 0.0f;
-        }
-
-        // Treinar várias épocas para extrair melhor os padrões
-        const int epochs = 5;
+        const size_t batch = std::min(BATCH_SIZE, memory.size());
+        std::uniform_int_distribution<size_t> dist(0, memory.size() - 1);
+        const int epochs = 3;
         for (int e = 0; e < epochs; ++e) {
+            torch::Tensor data = torch::empty({(long)batch, INPUT_DIM});
+            torch::Tensor labels = torch::empty({(long)batch, 1});
+            for (size_t i = 0; i < batch; ++i) {
+                size_t idx = dist(rng);
+                auto vec = memory[idx].first.to_vector();
+                data[i] = torch::from_blob(vec.data(), {INPUT_DIM}, torch::kFloat32).clone();
+                labels[i][0] = memory[idx].second ? 1.0f : 0.0f;
+            }
             torch::Tensor preds = net->forward(data);
             torch::Tensor loss = torch::binary_cross_entropy(preds, labels);
             optimizer->zero_grad();
