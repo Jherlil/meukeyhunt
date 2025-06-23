@@ -8,6 +8,8 @@
 #include <sstream>
 #include <iomanip>
 #include <mutex>
+#include <memory>
+#include <vector>
 
 std::vector<std::pair<FeatureSet, bool>> RLAgent::memory;
 std::map<int, std::array<float,2>> RLAgent::q_table;
@@ -19,6 +21,8 @@ float RLAgent::alpha = 0.1f;
 float RLAgent::gamma = 0.95f;
 float RLAgent::epsilon = 0.1f;
 std::mutex RLAgent::rl_mutex;
+torch::nn::Sequential RLAgent::net;
+std::unique_ptr<torch::optim::Adam> RLAgent::optimizer;
 static size_t learn_counter = 0;
 static const size_t print_interval = 10;
 static float last_report_best = -1.0f;
@@ -29,6 +33,13 @@ void RLAgent::init() {
     q_table.clear();
     best_score_value = -1.0f;
     best_feat = FeatureSet{};
+    net = torch::nn::Sequential(
+        torch::nn::Linear(INPUT_DIM, 64),
+        torch::nn::ReLU(),
+        torch::nn::Linear(64, 1),
+        torch::nn::Sigmoid()
+    );
+    optimizer = std::make_unique<torch::optim::Adam>(net->parameters(), torch::optim::AdamOptions(0.001));
     std::cout << "[RL] Agente Reinforcement Learning iniciado." << std::endl;
 }
 
@@ -36,6 +47,11 @@ int RLAgent::zone_from_feature(const FeatureSet& feat) {
     // Exemplo: usar parte da entropia + palíndromo como indexador de zona
     int bucket = static_cast<int>((feat.priv_hex_entropy * 10.0f) + 5 * feat.priv_hex_palindrome);
     return bucket;
+}
+
+static torch::Tensor features_to_tensor(const FeatureSet& feat) {
+    auto vec = feat.to_vector();
+    return torch::from_blob(vec.data(), {RLAgent::INPUT_DIM}, torch::kFloat32).clone();
 }
 
 void RLAgent::observe(const FeatureSet& feat, float score, bool hit) {
@@ -61,14 +77,15 @@ bool RLAgent::decide(const FeatureSet& feat) {
     if (dist(rng) < epsilon) {
         return dist(rng) < 0.5f;
     }
-    auto it = q_table.find(zone);
     float keep_q = 0.0f;
-    float skip_q = 0.0f;
-    if (it != q_table.end()) {
-        keep_q = it->second[1];
-        skip_q = it->second[0];
+    if (optimizer) {
+        keep_q = net->forward(features_to_tensor(feat)).item<float>();
     }
-    return keep_q >= skip_q;
+    auto it = q_table.find(zone);
+    if (it != q_table.end()) {
+        keep_q = (keep_q + it->second[1]) / 2.0f; // combinar heurística e rede
+    }
+    return keep_q >= 0.5f;
 }
 
 void RLAgent::learn() {
@@ -91,6 +108,21 @@ void RLAgent::learn() {
                       << " keep=" << qvals[1] << std::endl;
         }
     }
+
+    if (!memory.empty() && optimizer) {
+        torch::Tensor data = torch::empty({(long)memory.size(), INPUT_DIM});
+        torch::Tensor labels = torch::empty({(long)memory.size(), 1});
+        for (size_t i = 0; i < memory.size(); ++i) {
+            auto vec = memory[i].first.to_vector();
+            data[i] = torch::from_blob(vec.data(), {INPUT_DIM}, torch::kFloat32).clone();
+            labels[i][0] = memory[i].second ? 1.0f : 0.0f;
+        }
+        torch::Tensor preds = net->forward(data);
+        torch::Tensor loss = torch::binary_cross_entropy(preds, labels);
+        optimizer->zero_grad();
+        loss.backward();
+        optimizer->step();
+    }
     epsilon *= 0.99f;
 }
 
@@ -102,6 +134,9 @@ void RLAgent::save(const std::string& path) {
         out << zone << "," << qvals[0] << "," << qvals[1] << "\n";
     }
     out.close();
+    if (optimizer) {
+        torch::save(net, path + ".pt");
+    }
     std::cout << "[RL] Heatmap salvo em " << path << "\n";
 }
 
@@ -119,6 +154,12 @@ void RLAgent::load(const std::string& path) {
         if (ss >> zone >> comma >> skip_q >> comma >> keep_q) {
             q_table[zone] = {skip_q, keep_q};
         }
+    }
+    try {
+        torch::load(net, path + ".pt");
+        optimizer = std::make_unique<torch::optim::Adam>(net->parameters(), torch::optim::AdamOptions(0.001));
+    } catch (...) {
+        // ignore
     }
     std::cout << "[RL] Modelo RL carregado de " << path << " com " << q_table.size() << " zonas." << std::endl;
 }

@@ -10,9 +10,11 @@
 #include <map>
 #include <array>
 #include <mutex>
+#include <memory>
 
 class RLAgent {
 public:
+    static constexpr int INPUT_DIM = 29;
     static void init();
     static void observe(const FeatureSet& feat, float score, bool hit);
     static bool decide(const FeatureSet& feat);
@@ -33,6 +35,8 @@ private:
     static float best_score_value;
     static bool verbose;
     static std::mutex rl_mutex;
+    static torch::nn::Sequential net;
+    static std::unique_ptr<torch::optim::Adam> optimizer;
 
     static float alpha;
     static float gamma;
