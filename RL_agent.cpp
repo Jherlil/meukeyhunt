@@ -33,8 +33,20 @@ void RLAgent::init() {
     q_table.clear();
     best_score_value = -1.0f;
     best_feat = FeatureSet{};
+    // Rede neural aprofundada para melhor capacidade de aprendizado
     net = torch::nn::Sequential(
-        torch::nn::Linear(INPUT_DIM, 64),
+        torch::nn::Linear(INPUT_DIM, 1024),
+        torch::nn::ReLU(),
+        torch::nn::Dropout(0.3),
+        torch::nn::Linear(1024, 512),
+        torch::nn::ReLU(),
+        torch::nn::Dropout(0.3),
+        torch::nn::Linear(512, 256),
+        torch::nn::ReLU(),
+        torch::nn::Dropout(0.2),
+        torch::nn::Linear(256, 128),
+        torch::nn::ReLU(),
+        torch::nn::Linear(128, 64),
         torch::nn::ReLU(),
         torch::nn::Linear(64, 1),
         torch::nn::Sigmoid()
@@ -117,11 +129,16 @@ void RLAgent::learn() {
             data[i] = torch::from_blob(vec.data(), {INPUT_DIM}, torch::kFloat32).clone();
             labels[i][0] = memory[i].second ? 1.0f : 0.0f;
         }
-        torch::Tensor preds = net->forward(data);
-        torch::Tensor loss = torch::binary_cross_entropy(preds, labels);
-        optimizer->zero_grad();
-        loss.backward();
-        optimizer->step();
+
+        // Treinar várias épocas para extrair melhor os padrões
+        const int epochs = 5;
+        for (int e = 0; e < epochs; ++e) {
+            torch::Tensor preds = net->forward(data);
+            torch::Tensor loss = torch::binary_cross_entropy(preds, labels);
+            optimizer->zero_grad();
+            loss.backward();
+            optimizer->step();
+        }
     }
     epsilon *= 0.99f;
 }
