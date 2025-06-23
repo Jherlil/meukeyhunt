@@ -1,4 +1,3 @@
-
 #ifndef RL_AGENT_H
 #define RL_AGENT_H
 
@@ -10,6 +9,7 @@
 #include "ml_helpers.h"
 #include <map>
 #include <array>
+#include <mutex>
 
 class RLAgent {
 public:
@@ -32,6 +32,7 @@ private:
     static FeatureSet best_feat;
     static float best_score_value;
     static bool verbose;
+    static std::mutex rl_mutex;
 
     static float alpha;
     static float gamma;

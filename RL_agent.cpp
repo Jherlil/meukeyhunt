@@ -7,6 +7,7 @@
 #include <cmath>
 #include <sstream>
 #include <iomanip>
+#include <mutex>
 
 std::vector<std::pair<FeatureSet, bool>> RLAgent::memory;
 std::map<int, std::array<float,2>> RLAgent::q_table;
@@ -17,11 +18,13 @@ bool RLAgent::verbose = false;
 float RLAgent::alpha = 0.1f;
 float RLAgent::gamma = 0.95f;
 float RLAgent::epsilon = 0.1f;
+std::mutex RLAgent::rl_mutex;
 static size_t learn_counter = 0;
 static const size_t print_interval = 10;
 static float last_report_best = -1.0f;
 
 void RLAgent::init() {
+    std::lock_guard<std::mutex> lock(rl_mutex);
     memory.clear();
     q_table.clear();
     best_score_value = -1.0f;
@@ -36,6 +39,7 @@ int RLAgent::zone_from_feature(const FeatureSet& feat) {
 }
 
 void RLAgent::observe(const FeatureSet& feat, float score, bool hit) {
+    std::lock_guard<std::mutex> lock(rl_mutex);
     memory.emplace_back(feat, hit);
     if (memory.size() > 10000) memory.erase(memory.begin());
 
@@ -68,6 +72,7 @@ bool RLAgent::decide(const FeatureSet& feat) {
 }
 
 void RLAgent::learn() {
+    std::lock_guard<std::mutex> lock(rl_mutex);
     learn_counter++;
     bool report = false;
     if (best_score_value > last_report_best + 1e-6) {
@@ -90,6 +95,7 @@ void RLAgent::learn() {
 }
 
 void RLAgent::save(const std::string& path) {
+    std::lock_guard<std::mutex> lock(rl_mutex);
     std::ofstream out(path);
     if (!out) return;
     for (const auto& [zone, qvals] : q_table) {
@@ -100,6 +106,7 @@ void RLAgent::save(const std::string& path) {
 }
 
 void RLAgent::load(const std::string& path) {
+    std::lock_guard<std::mutex> lock(rl_mutex);
     std::ifstream in(path);
     if (!in) return;
     q_table.clear();
@@ -136,10 +143,12 @@ std::vector<FeatureSet> RLAgent::top_candidates(size_t n) {
 }
 
 void RLAgent::set_verbose(bool v) {
+    std::lock_guard<std::mutex> lock(rl_mutex);
     verbose = v;
 }
 
 void RLAgent::set_params(float a, float g, float e) {
+    std::lock_guard<std::mutex> lock(rl_mutex);
     alpha = a;
     gamma = g;
     epsilon = e;
