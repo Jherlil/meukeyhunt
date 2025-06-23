@@ -18,6 +18,7 @@
 
 #include <unordered_set>
 #include <fstream>
+#include <mutex>
 
 #define SHA256_DIGEST_LENGTH 32
 
@@ -130,11 +131,10 @@ std::string private_key_to_address(const std::string& private_key_hex, bool use_
     }
 
     static Secp256K1 secp_k1_instance;
-    static bool secp_k1_initialized = false;
-    if (!secp_k1_initialized) {
+    static std::once_flag secp_k1_init_flag;
+    std::call_once(secp_k1_init_flag, [](){
         secp_k1_instance.Init();
-        secp_k1_initialized = true;
-    }
+    });
 
     Int priv_int;
     priv_int.SetBase16(private_key_hex.c_str());
