@@ -275,7 +275,12 @@ bool load_models(const std::string& mlp_path_param) {
         } else { std::cerr << "[ML] Falha ao carregar modelo LightGBM: " << LGBM_GetLastError() << std::endl; std::cerr.flush(); }
     } else { std::cout << "[ML] Arquivo LightGBM não encontrado: " << lgb_model_path << std::endl; std::cout.flush(); }
     std::cout << "[DEBUG LM_GLOBAL] Ponto LM8: Saindo de load_models." << std::endl; std::cout.flush();
-    return mlp_g_loaded || ae_g_loaded || xgb_loaded || lgb_loaded;
+
+    bool all_loaded = mlp_g_loaded && ae_g_loaded && xgb_loaded && lgb_loaded;
+    if (!all_loaded) {
+        std::cerr << "[ML] Nem todos os modelos auxiliares foram carregados corretamente." << std::endl;
+    }
+    return all_loaded;
 }
 
 // DEFINIÇÃO DE ml_load_puzzle_patterns MOVIDA PARA ANTES DE ml_init
