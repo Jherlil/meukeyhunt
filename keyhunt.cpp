@@ -2528,7 +2528,8 @@ while (true) {
         }
 
         // --- Filtro por score (IA dita se continua ou pula) ---
-        printf("[IA DEBUG] Range 0x%llx - 0x%llx \342\206\222 Score: %.4f\n",
+        printf("[IA DEBUG] Key %s Range 0x%llx-0x%llx \342\206\222 Score: %.4f\n",
+               priv_hex.c_str(),
                (unsigned long long)cur.from,
                (unsigned long long)cur.to,
                score);
