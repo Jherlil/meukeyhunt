@@ -2519,6 +2519,13 @@ while (true) {
             continue; // pular chave sem gastar processamento
         }
 
+        // --- Exibir a chave atualmente processada ---
+        #pragma omp critical
+        {
+            printf("\r[IA KEY] %s\033[K", priv_hex.c_str());
+            fflush(stdout);
+        }
+
         float score = MLEngine::ml_score(f);
         MLEngine::ml_push_score(score);
 
