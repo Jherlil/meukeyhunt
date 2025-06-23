@@ -31,21 +31,30 @@ float combined_key_score(const std::string &privkey_hex) {
 
 Range next_range() {
     Range r;
-    uint64_t cur = g_current.load();
-    if (cur > g_range_end.load()) {
-        r.from = r.to = 0;
-        r.stride = g_stride.load();
-        return r;
-    }
+    while (true) {
+        uint64_t cur = g_current.load();
+        if (cur > g_range_end.load()) {
+            r.from = r.to = 0;
+            r.stride = g_stride.load();
+            return r;
+        }
 
-    uint64_t stride = g_stride.load();
-    uint64_t block = 0xFFFFF * stride;
-    r.from = cur;
-    r.to = (cur + block > g_range_end.load()) ? g_range_end.load() : cur + block;
-    r.stride = stride;
-    r.min_score = 0.8f;
-    g_current.store(r.to + stride);
-    return r;
+        uint64_t stride = g_stride.load();
+        uint64_t block = 0xFFFFF * stride;
+        r.from = cur;
+        r.to = (cur + block > g_range_end.load()) ? g_range_end.load() : cur + block;
+        r.stride = stride;
+        r.min_score = 0.8f;
+        g_current.store(r.to + stride);
+
+        // Consultar RLAgent para ver se vale processar esta faixa
+        std::string seed_hex = to_hex(r.from);
+        FeatureSet f_seed = extract_features(seed_hex);
+        if (RLAgent::decide(f_seed)) {
+            return r; // faixa aprovada
+        }
+        // Caso contrário, tenta a próxima faixa
+    }
 }
 
 uint64_t get_range_start() { return g_range_start.load(); }
