@@ -2507,9 +2507,11 @@ while (true) {
               << "% 0x" << std::hex << cur.from << "-0x" << cur.to << std::dec
               << std::flush;
 
+    size_t batch = (cur.to - cur.from) / cur.stride + 1;
+    std::vector<std::string> cand_keys = ia::generate_candidate_keys(batch);
     #pragma omp parallel for
-    for (uint64_t k = cur.from; k <= cur.to; k += cur.stride) {
-        std::string priv_hex = to_hex(k);
+    for (size_t i = 0; i < cand_keys.size(); ++i) {
+        std::string priv_hex = cand_keys[i];
 
         // --- Extração e avaliação de features pela IA ---
         FeatureSet f = extract_features(priv_hex);
