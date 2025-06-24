@@ -57,7 +57,7 @@ void RLAgent::init() {
         torch::nn::Sigmoid()
     );
     optimizer = std::make_unique<torch::optim::Adam>(net->parameters(), torch::optim::AdamOptions(0.001));
-    net_target = net;
+    net_target = torch::nn::Sequential(std::dynamic_pointer_cast<torch::nn::SequentialImpl>(net->clone()));
     std::cout << "[RL] Agente Reinforcement Learning iniciado." << std::endl;
 }
 
@@ -236,16 +236,20 @@ void RLAgent::load(const std::string& path) {
     }
     try {
         torch::load(net, path + ".pt");
-        torch::load(net_target, path + ".target.pt");
-        optimizer = std::make_unique<torch::optim::Adam>(net->parameters(), torch::optim::AdamOptions(0.001));
-        try {
-            torch::load(RLAgent::pca_components, path + ".pca.pt");
-            torch::load(RLAgent::pca_mean, path + ".pca_mean.pt");
-            RLAgent::pca_ready = true;
-        } catch (...) {}
     } catch (...) {
-        // ignore
+        // ignore failure to load main net
     }
+    try {
+        torch::load(net_target, path + ".target.pt");
+    } catch (...) {
+        net_target = torch::nn::Sequential(std::dynamic_pointer_cast<torch::nn::SequentialImpl>(net->clone()));
+    }
+    optimizer = std::make_unique<torch::optim::Adam>(net->parameters(), torch::optim::AdamOptions(0.001));
+    try {
+        torch::load(RLAgent::pca_components, path + ".pca.pt");
+        torch::load(RLAgent::pca_mean, path + ".pca_mean.pt");
+        RLAgent::pca_ready = true;
+    } catch (...) {}
     std::cout << "[RL] Modelo RL carregado de " << path << " com " << q_table.size() << " zonas." << std::endl;
 }
 
@@ -258,6 +262,7 @@ float RLAgent::best_key_score() {
 }
 
 std::vector<FeatureSet> RLAgent::top_candidates(size_t n) {
+    std::lock_guard<std::mutex> lock(rl_mutex);
     std::vector<FeatureSet> out;
     if (n == 0) return out;
     size_t count = 0;
