@@ -12,6 +12,8 @@
 #include <sstream>
 #include <cctype>
 #include <vector>
+#include <algorithm>
+#include <utility>
 
 namespace ia {
 
@@ -150,27 +152,59 @@ std::vector<std::string> generate_candidate_keys(size_t n) {
     std::uniform_int_distribution<uint64_t> dist(g_range_start.load(), g_range_end.load());
     std::discrete_distribution<int> nibble_dist(nibble_hist.begin(), nibble_hist.end());
 
-    std::string best = RLAgent::best_key();
-    uint64_t best_val = 0;
-    if (!best.empty()) {
+    size_t population = std::max<size_t>(n * 10, 50);
+
+    // Sementes: melhores chaves já observadas ou extraídas do histórico
+    auto seeds = query_promising_keys(std::max<size_t>(n, 10));
+    std::vector<uint64_t> pool;
+    pool.reserve(population);
+    for (const auto& s : seeds) {
         try {
-            best_val = std::stoull(best.substr(0, 16), nullptr, 16);
-        } catch (...) {
-            best_val = dist(eng);
+            pool.push_back(std::stoull(s.substr(0,16), nullptr, 16));
+        } catch (...) {}
+    }
+    while (pool.size() < population) {
+        pool.push_back(dist(eng));
+    }
+
+    auto score_candidate = [&](uint64_t v) -> float {
+        std::string h = to_hex(v);
+        FeatureSet f = extract_features(h);
+        return MLEngine::ml_predict(f);
+    };
+
+    auto mutate = [&](uint64_t base)->uint64_t {
+        std::uniform_int_distribution<int64_t> delta(-10000, 10000);
+        int64_t cand = static_cast<int64_t>(base) + delta(eng);
+        if (cand < static_cast<int64_t>(g_range_start.load()) || cand > static_cast<int64_t>(g_range_end.load())) {
+            cand = dist(eng);
+        }
+        return static_cast<uint64_t>(cand);
+    };
+
+    for(int gen = 0; gen < 2; ++gen) {
+        std::vector<std::pair<uint64_t,float>> scored;
+        for(uint64_t v : pool) {
+            scored.emplace_back(v, score_candidate(v));
+        }
+        std::sort(scored.begin(), scored.end(), [](auto&a, auto&b){ return a.second > b.second; });
+        scored.resize(population/2);
+        pool.clear();
+        for(auto &p : scored) {
+            pool.push_back(p.first);
+            pool.push_back(mutate(p.first));
         }
     }
 
-    for (size_t i = 0; i < n; ++i) {
-        uint64_t base = best_val ? best_val : dist(eng);
-        std::uniform_int_distribution<int> delta(-5000, 5000);
-        uint64_t candidate = base + delta(eng);
-        if (candidate < g_range_start.load() || candidate > g_range_end.load()) {
-            candidate = dist(eng);
-        }
-        std::string hex = to_hex(candidate);
-        if (!hex.empty()) {
-            hex[0] = "0123456789abcdef"[nibble_dist(eng)];
-        }
+    std::vector<std::pair<uint64_t,float>> final_scored;
+    for(uint64_t v : pool) {
+        final_scored.emplace_back(v, score_candidate(v));
+    }
+    std::sort(final_scored.begin(), final_scored.end(), [](auto&a, auto&b){ return a.second > b.second; });
+
+    for(size_t i = 0; i < n && i < final_scored.size(); ++i) {
+        std::string hex = to_hex(final_scored[i].first);
+        if(!hex.empty()) hex[0] = "0123456789abcdef"[nibble_dist(eng)];
         result.push_back(hex);
     }
 
