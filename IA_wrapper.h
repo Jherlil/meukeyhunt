@@ -21,6 +21,8 @@ struct Range {
 float combined_key_score(const std::string &privkey_hex);
 bool keep_key(const std::string &privkey_hex, const Range &r);
 Range next_range();
+// Gera a próxima chave privada usando somente a IA
+std::string next_key();
 uint64_t get_range_start();
 uint64_t get_range_end();
 uint64_t get_stride();
