@@ -2472,60 +2472,25 @@ void *thread_process_minikeys(void *vargp)	{
         }
 
 while (true) {
-    ia::Range cur = ia::next_range();  // IA decide a faixa
-    uint64_t total = ia::get_range_end() - ia::get_range_start() + 1;
-    uint64_t pos = cur.from - ia::get_range_start();
-    double pct = total ? (100.0 * pos / total) : 0.0;
-    int barWidth = 40;
-    int filled = static_cast<int>((pct / 100.0) * barWidth);
-    std::cout << "\r[IA] [";
-    for (int i = 0; i < barWidth; ++i) std::cout << (i < filled ? '#' : ' ');
-    std::cout << "] " << std::fixed << std::setprecision(2) << pct
-              << "% 0x" << std::hex << cur.from << "-0x" << cur.to << std::dec
-              << std::flush;
+    std::string priv_hex = ia::next_key();
 
-    #pragma omp parallel for
-    for (uint64_t k = cur.from; k <= cur.to; k += cur.stride) {
-        std::string priv_hex = to_hex(k);
+    FeatureSet f = extract_features(priv_hex);
+    float score = MLEngine::ml_score(f);
+    MLEngine::ml_push_score(score);
 
-        // --- Extração e avaliação de features pela IA ---
-        FeatureSet f = extract_features(priv_hex);
-        float score = MLEngine::ml_score(f);
-        MLEngine::ml_push_score(score);
+    if (!ia::keep_key(priv_hex, ia::Range()))
+        continue;
 
-        // --- Log de debug opcional ---
-        if (FLAGDEBUG) {
-            std::cout << "[DEBUG IA_LOOP] Score da chave " << priv_hex.substr(0,8) << ": " << score << std::endl;
-        }
-
-        // --- Filtro por score (IA dita se continua ou pula) ---
-        printf("[IA DEBUG] Range 0x%llx - 0x%llx \342\206\222 Score: %.4f\n",
-               (unsigned long long)cur.from,
-               (unsigned long long)cur.to,
-               score);
-
-        if (score < 0.8)
-            continue;
-
-        // --- Verifica se a IA considera manter a chave mesmo com bom score ---
-        if (!ia::keep_key(priv_hex, cur))
-            continue;
-
-        // --- Verifica se é hit real ---
-        bool hit = check_key(priv_hex.c_str());
-        if (hit) {
-            ia::reward(cur, true, f);  // Recompensa por acerto
-        }
-
-        #pragma omp critical
-        {
-            RLAgent::observe(f, score, hit);
-        }
+    bool hit = check_key(priv_hex.c_str());
+    if (hit) {
+        ia::reward(ia::Range(), true, f);
     }
 
+    RLAgent::observe(f, score, hit);
     RLAgent::learn();
-    std::cout << "\n[RL] Melhor chave até agora: " << RLAgent::best_key().substr(0,16)
-              << "... Score: " << RLAgent::best_key_score() << std::endl;
+
+    std::cout << "\r[RL] Melhor chave: " << RLAgent::best_key().substr(0,16)
+              << "... Score: " << RLAgent::best_key_score() << std::flush;
 }
 
 	minikey2check[0] = 'S';

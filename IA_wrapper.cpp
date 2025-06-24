@@ -2,10 +2,12 @@
 #include "ml_engine.h"
 #include "ml_helpers.h"
 #include "RL_agent.h"
+#include "helpers.h"
 #include <atomic>
 #include <thread>
 #include <chrono>
 #include <iostream>
+#include <random>
 
 namespace ia {
 
@@ -15,6 +17,7 @@ static std::atomic<uint64_t> g_range_start(1);
 static std::atomic<uint64_t> g_range_end(0xFFFFFFFFULL);
 static std::atomic<uint64_t> g_stride(1);
 static std::atomic<uint64_t> g_current(1);
+static std::mt19937_64 g_rng(std::random_device{}());
 
 float combined_key_score(const std::string &privkey_hex) {
     FeatureSet f = extract_features(privkey_hex);
@@ -38,6 +41,22 @@ Range next_range() {
     r.min_score = 0.8f;
     g_current.store(r.to + stride);
     return r;
+}
+
+std::string next_key() {
+    uint64_t start = g_range_start.load();
+    uint64_t end = g_range_end.load();
+    std::uniform_int_distribution<uint64_t> dist(start, end);
+
+    while (true) {
+        uint64_t val = dist(g_rng);
+        std::string priv_hex = to_hex(val);
+        FeatureSet f = extract_features(priv_hex);
+        float score = MLEngine::ml_score(f);
+        if (score >= 0.5f && RLAgent::decide(f)) {
+            return priv_hex;
+        }
+    }
 }
 
 uint64_t get_range_start() { return g_range_start.load(); }
