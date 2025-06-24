@@ -61,7 +61,7 @@ LDFLAGS = -L$(TORCH_PATH)/lib -Wl,-rpath,$(TORCH_PATH)/lib \
 
 _LIBS_TORCH = -Wl,--start-group -ltorch -ltorch_cpu -lc10 -Wl,--end-group
 LIBS = $(_LIBS_TORCH) -lpthread -ldl -lm -lxgboost \
-       $(LIGHTGBM_PATH)/lib_lightgbm.so -lcrypto -lgmp -lz
+       $(LIGHTGBM_PATH)/lib_lightgbm.so -lcrypto -lgmp -lgmpxx -lz
 
 # ----------------------------------------------------------
 #  Objetos
